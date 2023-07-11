@@ -1,10 +1,10 @@
 -- Drops the db if it exists currently 
-DROP DATABASE IF EXISTS employeetracker_db;
+DROP DATABASE IF EXISTS employeeTracker_db;
 -- Creates the employeetracker_db database 
-CREATE DATABASE employeetracker_db;
+CREATE DATABASE employeeTracker_db;
 
 -- use employeetracker_db database 
-USE employeetracker_db;
+USE employeeTracker_db;
 
 -- creates table for department 
 CREATE TABLE department (
