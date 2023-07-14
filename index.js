@@ -107,6 +107,65 @@ function viewEmployees() {
     })
 };
 
+function addDepartment() {
+    inquirer.prompt([
+        {
+        name: 'newName',
+        type: 'input',
+        message: 'Enter Name of New Department'
+        }
+    ]).then((data) => {
+        const sql = `INSERT INTO department (department_name)
+        VALUES (?);`;
+        const params = [data.newName];
+        db.query(sql, params, (err, res) => {
+            if(res){
+                console.log("New Department Has Been Added!")
+            }else{
+                throw err
+            }
+            questions();
+        });
+    })
+}
+
+function addRole() {
+    db.query(`SELECT * FROM department;`, (err, result) => {
+        if (err) throw err;
+        inquirer.prompt([
+            {
+                name: 'newTitle',
+                type: 'input',
+                message: 'Enter Title of New Role'
+            },
+            {
+                name: 'newSalary',
+                type: 'input',
+                message: 'Enter Salary of New Role'
+            },
+            {
+                name: 'newDept',
+                type: 'list',
+                message: 'Which Department Does Role Belong In?',
+                choices: result.map(department => ({
+                    name: `${department.department_name}`,
+                    value: department.id
+                }))
+            }
+        ]).then((res) => {
+          db.query(`INSERT INTO role SET ?;`,
+            {
+                title: res.newTitle,
+                salary: res.newSalary, 
+                department_id: res.newDept,
+            },(err, result) => {
+                if (err) throw err;
+                console.log('New Role Has Been Added!')
+                questions();
+            })
+        })
+    })
+}
 // function updateEmployeeRole() {
 //     db.query
 // }
