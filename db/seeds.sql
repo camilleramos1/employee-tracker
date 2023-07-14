@@ -1,3 +1,4 @@
+-- uses the correct db so this info is actually going somewhere
 USE employeeTracker_db;
 
 INSERT INTO department (department_name)
