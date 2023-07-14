@@ -20,7 +20,9 @@ Once the user has run the file in their terminal, they will be prompted to choos
 
 ## Video Preview of Application
 ![employeetracker](assets/employee-tracker-vid.gif)
-https://drive.google.com/file/d/1mA-q_YXwklyOHwH2SpPfZSXG17J7Kbn_/view
+
+
+View the entire video here: https://drive.google.com/file/d/1mA-q_YXwklyOHwH2SpPfZSXG17J7Kbn_/view
 
 ## License
 This project is covered under the MIT license. To learn more, please click the license badge at the top of the page.
