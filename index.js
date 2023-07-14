@@ -3,7 +3,7 @@ const mysql = require('mysql2');
 const inquirer = require("inquirer");
 const cTable = require('console.table');
 
-
+// creates connection to mysql
 const db = mysql.createConnection(
     {
       host: 'localhost',
@@ -14,7 +14,7 @@ const db = mysql.createConnection(
       database: 'employeeTracker_db'
     },
 );
-
+// this catches errs, and let's user know they are connected to the db if sucessful
 db.connect((err) => {
     if (err) {
         throw err;
@@ -22,7 +22,7 @@ db.connect((err) => {
     console.log(`Connected to the employeeTracker_db database.`);
     questions();
 });
-// prompts for user to select from
+// prompts for user to select from using inquirer
 function questions() {
     inquirer.prompt([
         {
@@ -39,9 +39,13 @@ function questions() {
             'Update An Employee Role',
             'Remove A Department',
             'Remove A Role',
-            'Remove An Employee'
+            'Remove An Employee',
+            'View Employees by Manager',
+            'View Employees by Department',
+            'View The Total Utilized Budget of a Department'
         ]
      }
+    //  using a switch case since we have so many options. seemed easiest
     ]).then((answers) => {
         switch (answers.begin) {
             case 'View All Departments':
@@ -74,6 +78,15 @@ function questions() {
             case 'Remove An Employee':
                 deleteEmployee();
                 break;
+            case 'View Employees by Manager':
+                viewEmployeesByManager();
+                break;
+            case 'View Employees by Department':
+                viewEmployeesByDepartment();
+                break;
+            case 'View The Total Utilized Budget of a Department':
+                totalBudget();
+                break;
         }  
     });
 };
@@ -97,7 +110,7 @@ function viewRoles() {
         questions();
     })
 };
-
+// function to view all employees, using concatenate to view their manager as a name rather than an Id
 function viewEmployees() {
     let action = `SELECT 
     E.id AS Id, 
@@ -118,7 +131,7 @@ function viewEmployees() {
         questions();
     })
 };
-
+// function to add a department
 function addDepartment() {
     inquirer.prompt([
         {
@@ -140,7 +153,7 @@ function addDepartment() {
         });
     })
 }
-
+// function to add a role, user inputs title, salary, and department for role. using .map to retrieve info from seeds
 function addRole() {
     db.query(`SELECT * FROM department;`, (err, result) => {
         if (err) throw err;
@@ -178,7 +191,7 @@ function addRole() {
         })
     })
 }
-
+// function to add an employee, using .map to grab info from seeds.sql for the list of roles
 function addEmployee() {
     // db.query(`SELECT * FROM role`, (err, res) => {
     inquirer.prompt([
@@ -241,7 +254,7 @@ function addEmployee() {
         });
     });
 };
-
+// function to update an exisitng employee's role
 function updateEmployeeRole() {
     db.query(`SELECT * FROM employee`, (err, employee) => {
         if (err) throw err;
@@ -277,26 +290,194 @@ function updateEmployeeRole() {
         })
     })
 };    
-
+// function to delete a department from the list of options
 function deleteDepartment() {
-    db.query(`SELECT * FROM department`, (err, departments) => {
-        if (err) throw err;
+    db.query("SELECT * FROM department", (err, departments) => {
+      if (err) throw err;
         inquirer.prompt([
-            {
-                type: 'list',
-                name: 'deleteDept',
-                message: 'Please Select Which Department To Remove',
-                choices: departments.map(res => ({
-                    name: `${res.department_name}`,
-                    value: res.id
-                }))
+          {
+            type: "list",
+            name: "departmentId",
+            message: "Select the department to delete:",
+            choices: departments.map((department) => ({
+              name: department.department_name,
+              value: department.id,
+            })),
+          },
+        ])
+        .then((answers) => {
+          const departmentId = answers.departmentId;
+          // Update the role table to set department_id to NULL for the selected department, 
+        //   without this user will get an error because of foreign key constraints
+          db.query(
+            "UPDATE role SET department_id = NULL WHERE department_id = ?",
+            [departmentId],
+            (err, result) => {
+              if (err) throw err;
+              db.query(
+                "DELETE FROM department WHERE id = ?",
+                [departmentId],
+                (err, result) => {
+                  if (err) throw err;
+                  console.log("Department has been deleted!");
+                  questions();
+                }
+              );
             }
-        ]).then((data) => {
-            db.query(`DELETE FROM department WHERE id = ${data.deleteDept}`, (err, res) => {
+          );
+        });
+    });
+  };
+// function to delete a role from list of roles
+  function deleteRole() {
+    db.query("SELECT * FROM role", (err, roles) => {
+      if (err) throw err;
+      inquirer.prompt([
+          {
+            type: "list",
+            name: "roleId",
+            message: "Select the role to delete:",
+            choices: roles.map((role) => ({
+              name: role.title,
+              value: role.id,
+            })),
+          },
+        ])
+        .then((answers) => {
+          const roleId = answers.roleId;
+          db.query("DELETE FROM role WHERE id = ?", [roleId], (err, result) => {
+            if (err) throw err;
+            console.log("Role has been deleted!");
+            questions();
+          });
+        });
+    });
+  };
+// function to delete an employee using id
+  function deleteEmployee() {
+    db.query("SELECT * FROM employee", (err, employees) => {
+      if (err) throw err;
+      inquirer.prompt([
+          {
+            type: "list",
+            name: "employeeId",
+            message: "Select the employee to delete:",
+            choices: employees.map((employee) => ({
+              name: `${employee.first_name} ${employee.last_name}`,
+              value: employee.id,
+            })),
+          },
+        ])
+        .then((answers) => {
+          const employeeId = answers.employeeId;
+          db.query("DELETE FROM employee WHERE id = ?", [employeeId], (err, result) => {
+            if (err) throw err;
+            console.log("Employee has been deleted!");
+            questions();
+          });
+        });
+    });
+  };
+// function to view employees by manager, using concatenate again to pull managers as names rather than ids
+  function viewEmployeesByManager() {
+    db.query("SELECT * FROM employee", (err, employees) => {
+      if (err) throw err;
+      inquirer.prompt([
+          {
+            type: "list",
+            name: "managerId",
+            message: "Select the manager to view employees:",
+            choices: employees.map((employee) => ({
+              name: `${employee.first_name} ${employee.last_name}`,
+              value: employee.id,
+            })),
+          },
+        ]).then((answers) => {
+          const managerId = answers.managerId;
+          let action = `SELECT 
+            E.id AS Id, 
+            E.first_name AS "First Name", 
+            E.last_name AS "Last Name", 
+            role.title AS Title, 
+            role.salary AS Salary, 
+            department.department_name AS Department, 
+            CONCAT(m.first_name, ' ', m.last_name) AS Manager
+            FROM employee E
+            INNER JOIN role ON E.role_id = role.id
+            INNER JOIN department ON role.department_id = department.id
+            LEFT JOIN employee m ON E.manager_id = m.id
+            WHERE E.manager_id = ?;`;
+          db.query(action, [managerId], (err, res) => {
+            if (err) throw err;
+            console.table(res);
+            questions();
+          });
+        });
+    });
+  }
+// function to view employees by department, again using concatenate to pull manager as name, so user can see managers as well as dept
+  function viewEmployeesByDepartment() {
+    db.query("SELECT * FROM department", (err, departments) => {
+      if (err) throw err;
+      inquirer.prompt([
+          {
+            type: "list",
+            name: "departmentId",
+            message: "Select the department to view employees:",
+            choices: departments.map((department) => ({
+              name: department.department_name,
+              value: department.id,
+            })),
+          },
+        ]).then((answers) => {
+            const departmentId = answers.departmentId;
+            let action = `SELECT 
+            E.id AS Id, 
+            E.first_name AS "First Name", 
+            E.last_name AS "Last Name", 
+            role.title AS Title, 
+            role.salary AS Salary, 
+            department.department_name AS Department, 
+            CONCAT(m.first_name, ' ', m.last_name) AS Manager
+            FROM 
+            employee E
+            INNER JOIN role ON E.role_id = role.id
+            INNER JOIN department ON role.department_id = department.id
+            LEFT JOIN employee m ON E.manager_id = m.id
+            WHERE 
+            department.id = ?;`;
+            db.query(action, [departmentId], (err, res) => {
                 if (err) throw err;
-                console.log('Department Has Been Deleted.');
+                console.table(res);
                 questions();
-            })
-        })
-    })
-}
+            });
+        });
+    });
+  };
+// function to view the total utilized budget/combined salaries for a specific department
+  function totalBudget() {
+    db.query("SELECT * FROM department", (err, departments) => {
+      if (err) throw err;
+      inquirer.prompt([
+          {
+            type: "list",
+            name: "departmentBudget",
+            message: "Select the department to view total salary:",
+            choices: departments.map((department) => ({
+              name: department.department_name,
+              value: department.id,
+            })),
+          },
+        ]).then((answers) => {
+            const departmentSalary = answers.departmentBudget;
+            let action = `SELECT SUM(role.salary) AS 'Total Salary' FROM employee
+            INNER JOIN role ON employee.role_id = role.id
+            INNER JOIN department ON role.department_id = department.id WHERE department.id = ?;`;
+            db.query(action, [departmentSalary], (err, res) => {
+                if (err) throw err;
+                console.table(res);
+                questions();
+            });
+        });
+    });
+  }
